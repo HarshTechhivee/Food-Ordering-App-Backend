@@ -1,17 +1,65 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { UpdateMenuItemInput } from "../types/menu.types.js";
+import { UpdateMenuItemInput, MenuQuery } from "../types/menu.types.js";
 import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/AppError.js";
 
-export const getAllMenuItems = async () => {
+export const getAllMenuItems = async ({ page, limit, search, category, sort, }: MenuQuery) => {
 
-    return prisma.menuItem.findMany({
-        orderBy: {
-            createdAt: "desc",
+    const skip = (page - 1) * limit;
+
+    const where = {
+        ...(search
+            ? {
+                OR: [
+                    {
+                        name: {
+                            contains: search,
+                            mode: "insensitive" as const,
+                        },
+                    },
+                    {
+                        description: {
+                            contains: search,
+                            mode: "insensitive" as const,
+                        },
+                    },
+                ],
+            }
+            : {}),
+
+        ...(category ? { category } : {}),
+    };
+
+    const orderBy =
+        sort === "price_asc"
+            ? { price: "asc" as const }
+            : sort === "price_desc"
+                ? { price: "desc" as const }
+                : { createdAt: "desc" as const };
+
+    const [items, total] = await prisma.$transaction([
+        prisma.menuItem.findMany({
+            where,
+            orderBy,
+            skip,
+            take: limit,
+        }),
+
+        prisma.menuItem.count({
+            where,
+        }),
+    ]);
+
+    return {
+        items,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
         },
-    });
-
+    };
 };
 
 export const updateMenuItem = async (id: number, data: UpdateMenuItemInput, newImage?: string) => {

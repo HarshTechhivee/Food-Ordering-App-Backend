@@ -4,6 +4,7 @@ import {
     createOrder as createOrderService,
     getOrderById as getOrderByIdService,
     getUserOrders as getUserOrdersService,
+    cancelOrder
 } from "../services/order.service.js";
 
 import type { CreateOrderInput } from "../types/order.types.js";
@@ -55,5 +56,21 @@ export const getUserOrders: RequestHandler = async (req, res) => {
     res.status(200).json({
         success: true,
         data: orders,
+    });
+};
+
+
+export const cancelOrderController: RequestHandler = async (req, res) => {
+
+    const orderId = Number(req.params.orderId);
+
+    const userId = req.user!.userId;
+
+    const result = await cancelOrder(orderId, userId);
+
+    return res.status(200).json({
+        success: true,
+        message: "Order cancelled and refund initiated",
+        data: result,
     });
 };

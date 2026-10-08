@@ -27,3 +27,12 @@ export const orderIdSchema = Joi.object({
         .positive()
         .required(),
 }).unknown(false);
+
+
+export const rejectOrderSchema = Joi.object({
+    rejectionReason: Joi.string()
+        .trim()
+        .min(3)
+        .max(500)
+        .required(),
+});

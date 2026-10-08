@@ -2,6 +2,7 @@ import type { RequestHandler } from "express";
 import { create } from "../services/menu.service.js";
 import { getAllMenuItems, updateMenuItem, getMenuItemById, updateMenuItemAvailability, deleteMenuItem } from "../services/adminMenu.service.js";
 import { AppError } from "../utils/AppError.js";
+import { MenuQuery } from "../types/menu.types.js";
 
 export const getAdminMenu: RequestHandler = async (req, res) => {
 
@@ -9,7 +10,9 @@ export const getAdminMenu: RequestHandler = async (req, res) => {
         throw new AppError("Authentication required", 401);
     }
 
-    const menuItems = await getAllMenuItems();
+    const { page, limit, search, category, sort, } = req.validatedQuery as MenuQuery;
+
+    const menuItems = await getAllMenuItems({ page, limit, search, category, sort, });
 
     res.status(200).json({
         success: true,

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "stripe": "stripe listen --events payment_intent.succeeded,payment_intent.payment_failed,refund.created --forward-to localhost:5001/api/payments/webhook"
   },
   "keywords": [],
   "author": "",
@@ -24,7 +25,8 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",
     "pg": "^8.23.0",
-    "socket.io": "^4.8.4"
+    "socket.io": "^4.8.4",
+    "stripe": "^23.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

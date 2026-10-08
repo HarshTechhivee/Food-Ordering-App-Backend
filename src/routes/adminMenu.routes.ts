@@ -6,10 +6,11 @@ import { createMenuItemSchema, updateMenuItemSchema, menuItemIdSchema, updateAva
 import { authenticate } from "../middleware/auth.middleware.js";
 import { requireRole } from "../middleware/role.middleware.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { menuQuerySchema } from "../validations/menu.validation.js";
 
 const router = Router();
 
-router.get("/", authenticate, requireRole("RESTAURANT_ADMIN"), asyncHandler(getAdminMenu));
+router.get("/", authenticate, requireRole("RESTAURANT_ADMIN"), validate(menuQuerySchema, "query"), asyncHandler(getAdminMenu));
 
 router.post(
     "/",
@@ -48,11 +49,11 @@ router.patch(
 );
 
 router.delete(
-  "/:id",
-  authenticate,
-  requireRole("RESTAURANT_ADMIN"),
-  validate(menuItemIdSchema, "params"),
-  asyncHandler(deleteAdminMenuItem)
+    "/:id",
+    authenticate,
+    requireRole("RESTAURANT_ADMIN"),
+    validate(menuItemIdSchema, "params"),
+    asyncHandler(deleteAdminMenuItem)
 );
 
 export default router;

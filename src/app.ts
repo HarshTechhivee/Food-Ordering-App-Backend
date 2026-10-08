@@ -11,12 +11,14 @@ import adminOrderRoutes from "./routes/adminOrder.routes.js";
 import adminMenuRoutes from "./routes/adminMenu.routes.js";
 import adminDashboardRoutes from "./routes/adminDashboard.routes.js";
 import path from "node:path";
+import paymentRoutes from "./routes/payment.routes.js";
+import { stripeWebhook } from "./controllers/payment.controller.js";
 
 const app = express();
 
 const allowedOrigins = [
     "http://localhost:5174",
-    "https://mzsmxg53-5174.inc1.devtunnels.ms",
+    "https://s1zdx1dk-5174.inc1.devtunnels.ms",
 ];
 
 app.use(
@@ -25,6 +27,25 @@ app.use(
         credentials: true,
     })
 );
+
+// app.use(
+//     "/api/payments",
+//     express.raw({
+//         type: "application/json",
+//     }),
+//     paymentRoutes
+// );
+
+app.post(
+    "/api/payments/webhook",
+    express.raw({
+        type: "application/json",
+    }),
+    stripeWebhook
+);
+
+
+app.use(express.json());
 
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 

@@ -10,7 +10,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
         cors: {
             origin: [
                 "http://localhost:5174",
-                "https://mzsmxg53-5174.inc1.devtunnels.ms",
+                "https://s1zdx1dk-5174.inc1.devtunnels.ms",
             ],
             credentials: true,
         }
@@ -43,6 +43,12 @@ export const initializeSocket = (httpServer: HttpServer) => {
         socket.join(`user:${userId}`);
 
         console.log(`Socket joined room: user:${userId}`);
+
+        if (role === "RESTAURANT_ADMIN") {
+            socket.join("admin");
+
+            console.log("Socket joined room: admin");
+        }
 
         socket.on("disconnect", () => {
             console.log("Socket disconnected:", socket.id);

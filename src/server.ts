@@ -1,5 +1,6 @@
 import "dotenv/config";
 import http from "node:http";
+import { stripe } from "./config/stripe.js";
 
 import app from "./app.js";
 import { initializeSocket } from "./config/socket.js";

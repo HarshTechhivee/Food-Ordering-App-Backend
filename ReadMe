@@ -1,0 +1,132 @@
+##  Food Ordering payment architecture
+
+                    FOOD ORDERING APP
+                           │
+          ┌────────────────┴────────────────┐
+          │                                 │
+       FRONTEND                          BACKEND
+       React                            Express
+          │                                 │
+          │ Create Order                    │
+          ├────────────────────────────────→│
+          │                                 │
+          │                          Create DB Order
+          │                                 │
+          │                          Create PaymentIntent
+          │                                 │
+          │←──────── clientSecret ──────────┤
+          │                                 │
+    Stripe Elements                         │
+          │                                 │
+          │ confirmPayment()                │
+          ├───────────────────────────────→ Stripe
+          │                                 │
+          │                          Payment processing
+          │                                 │
+          │                                 │
+          │                       payment_intent.succeeded
+          │                                 │
+          │                                 ▼
+          │                           Stripe CLI
+          │                                 │
+          │                                 │ forward
+          │                                 ▼
+          │                           Webhook API
+          │                                 │
+          │                                 ▼
+          │                          Verify signature
+          │                                 │
+          │                                 ▼
+          │                           Update PostgreSQL
+          │                                 │
+          │                          paymentStatus=PAID
+          │                                 │
+          │←──── redirect to success ───────┤
+          │
+          ▼
+   PaymentSuccess
+          │
+          ▼
+      Clear Cart
+          │
+          ▼
+       Orders
+
+
+## Complete flow :
+
+                 CUSTOMER
+                    │
+                    ▼
+                  CART
+                    │
+                    │ POST /orders
+                    ▼
+               EXPRESS API
+                    │
+                    ├──────→ PostgreSQL
+                    │          Create Order
+                    │
+                    ▼
+                  STRIPE
+                    │
+                    │ Create PaymentIntent
+                    ▼
+               PaymentIntent
+                    │
+                    │ client_secret
+                    ▼
+               EXPRESS API
+                    │
+                    ▼
+                REACT
+                    │
+                    ▼
+             Stripe Elements
+                    │
+                    │ confirmPayment()
+                    ▼
+                  STRIPE
+                    │
+                    │ payment succeeds
+                    ▼
+        ┌─────────────────────────┐
+        │ payment_intent.succeeded│
+        └────────────┬────────────┘
+                     │
+                     ▼
+                STRIPE CLI
+                     │
+                     │ forward
+                     ▼
+        localhost:5001/api/payments/webhook
+                     │
+                     ▼
+             Webhook Controller
+                     │
+                     ▼
+          Webhook Service
+                     │
+                     ▼
+                PostgreSQL
+                     │
+                     ▼
+          paymentStatus = PAID
+
+
+        At the same time : 
+
+          Stripe
+            │
+            │ return_url
+            ▼
+            Browser
+            │
+            ▼
+            PaymentSuccess.tsx
+            │
+            ▼
+            Show "Payment Successful"
+
+## So what exactly is Stripe CLI?
+## Stripe CLI is a development bridge that receives Stripe webhook events and forwards them to your local backend.

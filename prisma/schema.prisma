@@ -23,6 +23,14 @@ enum OrderStatus {
   OUT_FOR_DELIVERY
   DELIVERED
   REJECTED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
 }
 
 model User {
@@ -76,6 +84,14 @@ model Order {
   id          Int         @id @default(autoincrement())
   userId      Int
   status      OrderStatus @default(PENDING)
+
+
+  paymentStatus          PaymentStatus @default(PENDING)
+  stripePaymentIntentId  String?       @unique
+  stripeRefundId        String?       @unique
+
+  rejectionReason       String? 
+
   totalAmount Decimal     @db.Decimal(10, 2)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt

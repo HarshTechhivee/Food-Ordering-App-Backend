@@ -2,6 +2,7 @@ import { prisma } from "../config/prisma.js";
 import type { UpdateOrderStatusInput } from "../types/order.types.js";
 import { AppError } from "../utils/AppError.js";
 import { emitSocketEvent } from "../utils/socket-notification.js";
+import { refundOrderPayment } from "./payment.service.js";
 
 export const getAllOrders = async () => {
 
@@ -94,6 +95,12 @@ export const updateOrderStatus = async (orderId: number, data: UpdateOrderStatus
         },
     });
 
+    console.log("Sending order status notification:", {
+        room: `user:${updatedOrder.userId}`,
+        orderId: updatedOrder.id,
+        status: updatedOrder.status,
+    });
+
     emitSocketEvent(`user:${updatedOrder.userId}`, "order:statusUpdated",
         {
             orderId: updatedOrder.id,
@@ -109,5 +116,51 @@ export const updateOrderStatus = async (orderId: number, data: UpdateOrderStatus
         updatedAt: updatedOrder.updatedAt,
         itemCount: updatedOrder.items.length,
         user: updatedOrder.user,
+    };
+};
+
+
+export const rejectOrder = async (orderId: number, rejectionReason: string) => {
+
+    const order = await prisma.order.findUnique({
+        where: {
+            id: orderId,
+        },
+        select: {
+            id: true,
+            status: true,
+            paymentStatus: true,
+            stripePaymentIntentId: true,
+            stripeRefundId: true,
+        },
+    });
+
+    if (!order) {
+        throw new AppError("Order not found", 404);
+    }
+
+    if (order.status !== "PENDING") {
+        throw new AppError("Only pending orders can be rejected", 400);
+    }
+
+    if (order.paymentStatus !== "PAID") {
+        throw new AppError("Only paid orders can be rejected", 400);
+    }
+
+    const refund = await refundOrderPayment(order.id);
+
+    const updatedOrder = await prisma.order.update({
+        where: {
+            id: order.id,
+        },
+        data: {
+            status: "REJECTED",
+            rejectionReason,
+        },
+    });
+
+    return {
+        order: updatedOrder,
+        refundId: refund.id,
     };
 };

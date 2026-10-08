@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { createOrder, getOrderById, getUserOrders } from "../controllers/order.controller.js";
+import { createOrder, getOrderById, getUserOrders, cancelOrderController } from "../controllers/order.controller.js";
 
 import { authenticate } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
@@ -16,5 +16,7 @@ router.post("/", authenticate, validate(createOrderSchema, "body"), asyncHandler
 router.get("/", authenticate, asyncHandler(getUserOrders));
 
 router.get("/:id", authenticate, validate(orderIdSchema, "params"), asyncHandler(getOrderById));
+
+router.patch("/:orderId/cancel", authenticate, cancelOrderController);
 
 export default router;

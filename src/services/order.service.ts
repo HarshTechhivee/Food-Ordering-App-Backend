@@ -2,6 +2,8 @@ import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/AppError.js";
 import type { CreateOrderInput } from "../types/order.types.js";
 import { emitSocketEvent } from "../utils/socket-notification.js";
+import { createPaymentIntent, refundOrderPayment } from "./payment.service.js";
+import { PaymentStatus } from "../generated/prisma/enums.js";
 
 export const createOrder = async (userId: number, data: CreateOrderInput) => {
 
@@ -92,6 +94,31 @@ export const createOrder = async (userId: number, data: CreateOrderInput) => {
         }
     );
 
+    // Create Stripe PaymentIntent
+    const paymentIntent = await createPaymentIntent({
+        orderId: order.id,
+        userId,
+        amount: totalAmount,
+    });
+
+    // Save Stripe PaymentIntent ID
+    const updatedOrder = await prisma.order.update({
+        where: {
+            id: order.id,
+        },
+        data: {
+            stripePaymentIntentId: paymentIntent.id,
+        },
+        include: {
+            items: {
+                include: {
+                    menuItem: true,
+                },
+            },
+        },
+    });
+
+    // Notify admin
     const admin = await prisma.user.findFirst({
         where: {
             role: "RESTAURANT_ADMIN",
@@ -103,11 +130,14 @@ export const createOrder = async (userId: number, data: CreateOrderInput) => {
 
     if (admin) {
         emitSocketEvent(`user:${admin.id}`, "order:new", {
-            orderId: order.id,
+            orderId: updatedOrder.id,
         });
     }
 
-    return order;
+    return {
+        order: updatedOrder,
+        clientSecret: paymentIntent.client_secret,
+    };
 };
 
 
@@ -157,8 +187,45 @@ export const getUserOrders = async (userId: number) => {
         id: order.id,
         status: order.status,
         totalAmount: order.totalAmount,
+        PaymentStatus: order.paymentStatus,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         itemCount: order._count.items,
     }));
+};
+
+
+export const cancelOrder = async (orderId: number, userId: number) => {
+
+    const order = await prisma.order.findFirst({
+        where: {
+            id: orderId,
+            userId,
+        },
+    });
+
+    if (!order) {
+        throw new AppError("Order not found", 404);
+    }
+
+    if (order.status !== "PENDING") {
+        throw new AppError("Only pending orders can be cancelled", 400);
+    }
+
+    if (order.paymentStatus === "PAID") {
+        await refundOrderPayment(order.id);
+    }
+
+    const updatedOrder = await prisma.order.update({
+        where: {
+            id: order.id,
+        },
+        data: {
+            status: "CANCELLED",
+        },
+    });
+
+    return {
+        order: updatedOrder,
+    };
 };
