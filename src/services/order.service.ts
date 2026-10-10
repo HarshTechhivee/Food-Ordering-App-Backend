@@ -1,9 +1,7 @@
 import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/AppError.js";
-import type { CreateOrderInput } from "../types/order.types.js";
 import { emitSocketEvent } from "../utils/socket-notification.js";
-import { createPaymentIntent, refundOrderPayment } from "./payment.service.js";
-import { PaymentStatus } from "../generated/prisma/enums.js";
+import { refundOrderPayment } from "./payment.service.js";
 
 // export const createOrder = async (userId: number, data: CreateOrderInput) => {
 

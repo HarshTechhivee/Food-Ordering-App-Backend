@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response, } from "express";
-import { options, type ObjectSchema } from "joi";
+import { type ObjectSchema } from "joi";
 
 type Property = "body" | "query" | "params";
 

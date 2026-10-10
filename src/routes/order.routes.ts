@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getOrderById, getUserOrders, cancelOrderController } from "../controllers/order.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
-import { cancelOrderSchema, createOrderSchema, orderIdSchema } from "../validations/order.validation.js";
+import { cancelOrderSchema, orderIdSchema } from "../validations/order.validation.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = Router();

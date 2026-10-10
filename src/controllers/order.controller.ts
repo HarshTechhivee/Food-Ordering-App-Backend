@@ -6,7 +6,6 @@ import {
     cancelOrder
 } from "../services/order.service.js";
 
-import type { CreateOrderInput } from "../types/order.types.js";
 import { AppError } from "../utils/AppError.js";
 
 // export const createOrder: RequestHandler = async (req, res) => {

@@ -130,3 +130,11 @@
 
 ## So what exactly is Stripe CLI?
 ## Stripe CLI is a development bridge that receives Stripe webhook events and forwards them to your local backend.
+
+
+# Install ESLint in the backend : npm install --save-dev eslint @eslint/js typescript-eslint
+
+Package	Purpose
+eslint	The linting engine that analyzes our code.
+@eslint/js	Provides ESLint's recommended rules for JavaScript.
+typescript-eslint	Provides TypeScript support and recommended TypeScript linting rules.
