@@ -59,6 +59,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
 app.use("/api/admin/menu", adminMenuRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
+app.use("/api/payments",paymentRoutes)
 
 app.get("/api/health", (_req, res) => {
     res.status(200).json({

@@ -34,9 +34,9 @@ export const getAllOrders = async () => {
         totalAmount: order.totalAmount,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
-
         itemCount: order._count.items,
-
+        rejectionReason: order.rejectionReason,
+        cancellationReason: order.cancellationReason,
         user: order.user,
     }));
 };
@@ -120,6 +120,7 @@ export const updateOrderStatus = async (orderId: number, data: UpdateOrderStatus
 };
 
 
+
 export const rejectOrder = async (orderId: number, rejectionReason: string) => {
 
     const order = await prisma.order.findUnique({
@@ -128,6 +129,7 @@ export const rejectOrder = async (orderId: number, rejectionReason: string) => {
         },
         select: {
             id: true,
+            userId: true,
             status: true,
             paymentStatus: true,
             stripePaymentIntentId: true,
@@ -140,14 +142,27 @@ export const rejectOrder = async (orderId: number, rejectionReason: string) => {
     }
 
     if (order.status !== "PENDING") {
-        throw new AppError("Only pending orders can be rejected", 400);
+        throw new AppError(
+            "Only pending orders can be rejected",
+            400
+        );
     }
 
     if (order.paymentStatus !== "PAID") {
-        throw new AppError("Only paid orders can be rejected", 400);
+        throw new AppError(
+            "Only paid orders can be rejected",
+            400
+        );
     }
 
-    const refund = await refundOrderPayment(order.id);
+    if (!rejectionReason.trim()) {
+        throw new AppError(
+            "Rejection reason is required",
+            400
+        );
+    }
+
+    await refundOrderPayment(order.id);
 
     const updatedOrder = await prisma.order.update({
         where: {
@@ -155,12 +170,20 @@ export const rejectOrder = async (orderId: number, rejectionReason: string) => {
         },
         data: {
             status: "REJECTED",
-            rejectionReason,
+            paymentStatus: "REFUNDED",
+            rejectionReason: rejectionReason.trim(),
         },
     });
 
+    emitSocketEvent(
+        `user:${updatedOrder.userId}`,
+        "order:rejected",
+        {
+            orderId: updatedOrder.id,
+        }
+    );
+
     return {
         order: updatedOrder,
-        refundId: refund.id,
     };
 };

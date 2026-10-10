@@ -36,3 +36,12 @@ export const rejectOrderSchema = Joi.object({
         .max(500)
         .required(),
 });
+
+
+export const cancelOrderSchema = Joi.object({
+    cancellationReason: Joi.string()
+        .trim()
+        .min(3)
+        .max(500)
+        .required(),
+});

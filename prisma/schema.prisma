@@ -90,7 +90,8 @@ model Order {
   stripePaymentIntentId  String?       @unique
   stripeRefundId        String?       @unique
 
-  rejectionReason       String? 
+  rejectionReason       String?
+  cancellationReason String?
 
   totalAmount Decimal     @db.Decimal(10, 2)
   createdAt   DateTime    @default(now())
