@@ -30,5 +30,8 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      - name: Run ESLint
+        run: npm run lint
+
       - name: Build backend
         run: npm run build
