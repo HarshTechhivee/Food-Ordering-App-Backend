@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "dev": "node api.js && tsx watch src/server.ts",
+    "build": "node api.js && tsc",
     "lint": "eslint .",
-    "start": "node dist/server.js",
+    "start": "node api.js && node dist/server.js",
     "stripe": "stripe listen --events payment_intent.succeeded,payment_intent.payment_failed,refund.created --forward-to localhost:5001/api/payments/webhook"
   },
   "keywords": [],
@@ -22,6 +22,7 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
+    "firebase-admin": "^14.5.0",
     "joi": "^18.2.9",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",

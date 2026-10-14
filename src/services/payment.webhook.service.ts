@@ -1,6 +1,8 @@
 import Stripe from "stripe";
 import { prisma } from "../config/prisma.js";
 import { emitSocketEvent } from "../utils/socket-notification.js";
+import { notifyUser } from "./pushNotification.service.js";
+import { getFrontendUrl } from "../utils/frontendUrl.js";
 
 export const handleStripeWebhook = async (event: Stripe.Event) => {
 
@@ -151,9 +153,23 @@ export const handleStripeWebhook = async (event: Stripe.Event) => {
             });
 
             if (admin) {
-                emitSocketEvent(`user:${admin.id}`, "order:new",
-                    { orderId: order.id, }
-                );
+                // Keep the existing Socket.IO notification.
+                emitSocketEvent(`user:${admin.id}`, "order:new", {
+                    orderId: order.id,
+                });
+
+                // Send a browser push notification as well.
+                void notifyUser(
+                    admin.id,
+                    "New Order Received!",
+                    `Order #${order.id} has been placed and paid successfully.`,
+                    getFrontendUrl("/admin/orders")
+                ).catch((error: unknown) => {
+                    console.error(
+                        "Failed to send new order push notification:",
+                        error,
+                    );
+                });
             }
 
             break;

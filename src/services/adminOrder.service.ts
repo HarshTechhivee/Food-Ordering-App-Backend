@@ -1,8 +1,10 @@
 import { prisma } from "../config/prisma.js";
 import type { UpdateOrderStatusInput } from "../types/order.types.js";
 import { AppError } from "../utils/AppError.js";
+import { getFrontendUrl } from "../utils/frontendUrl.js";
 import { emitSocketEvent } from "../utils/socket-notification.js";
 import { refundOrderPayment } from "./payment.service.js";
+import { notifyUser } from "./pushNotification.service.js";
 
 export const getAllOrders = async () => {
 
@@ -108,6 +110,34 @@ export const updateOrderStatus = async (orderId: number, data: UpdateOrderStatus
         }
     );
 
+    const pushMessages: Partial<Record<"APPROVED" | "OUT_FOR_DELIVERY" | "DELIVERED", { title: string; body: string }>> = {
+        APPROVED: {
+            title: "Order Approved!",
+            body: `Great news! Your order #${updatedOrder.id} has been approved.`,
+        },
+        OUT_FOR_DELIVERY: {
+            title: "Order Out for Delivery!",
+            body: `Your order #${updatedOrder.id} is on its way.`,
+        },
+        DELIVERED: {
+            title: "Order Delivered!",
+            body: `Your order #${updatedOrder.id} has been delivered. Enjoy your meal!`,
+        },
+    };
+
+    const pushMessage = pushMessages[updatedOrder.status as keyof typeof pushMessages];
+
+    if (pushMessage) {
+        void notifyUser(
+            updatedOrder.userId,
+            pushMessage.title,
+            pushMessage.body,
+            getFrontendUrl("/orders"),
+        ).catch((error: unknown) => {
+            console.error(`Failed to send ${updatedOrder.status} push notification:`, error,);
+        });
+    }
+
     return {
         id: updatedOrder.id,
         status: updatedOrder.status,
@@ -118,7 +148,6 @@ export const updateOrderStatus = async (orderId: number, data: UpdateOrderStatus
         user: updatedOrder.user,
     };
 };
-
 
 
 export const rejectOrder = async (orderId: number, rejectionReason: string) => {
@@ -182,6 +211,17 @@ export const rejectOrder = async (orderId: number, rejectionReason: string) => {
             orderId: updatedOrder.id,
         }
     );
+
+
+    void notifyUser(
+        updatedOrder.userId,
+        "Order Rejected",
+        `Your order #${updatedOrder.id} was rejected. Your refund has been initiated.`,
+        getFrontendUrl("/orders"),
+    ).catch((error: unknown) => {
+        console.error("Failed to send order rejection push notification:", error,);
+    });
+
 
     return {
         order: updatedOrder,
