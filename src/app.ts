@@ -13,6 +13,7 @@ import adminDashboardRoutes from "./routes/adminDashboard.routes.js";
 import path from "node:path";
 import paymentRoutes from "./routes/payment.routes.js";
 import { stripeWebhook } from "./controllers/payment.controller.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 const app = express();
 
@@ -27,14 +28,6 @@ app.use(
         credentials: true,
     })
 );
-
-// app.use(
-//     "/api/payments",
-//     express.raw({
-//         type: "application/json",
-//     }),
-//     paymentRoutes
-// );
 
 app.post(
     "/api/payments/webhook",
@@ -60,6 +53,7 @@ app.use("/api/admin/orders", adminOrderRoutes);
 app.use("/api/admin/menu", adminMenuRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/payments",paymentRoutes)
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/api/health", (_req, res) => {
     res.status(200).json({

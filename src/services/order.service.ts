@@ -2,6 +2,8 @@ import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/AppError.js";
 import { emitSocketEvent } from "../utils/socket-notification.js";
 import { refundOrderPayment } from "./payment.service.js";
+import { notifyUser } from "./pushNotification.service.js";
+import { getFrontendUrl } from "../utils/frontendUrl.js";
 
 // export const createOrder = async (userId: number, data: CreateOrderInput) => {
 
@@ -239,6 +241,26 @@ export const cancelOrder = async (orderId: number, userId: number, cancellationR
         orderId: updatedOrder.id,
         status: updatedOrder.status,
     });
+
+    const admin = await prisma.user.findFirst({
+        where: {
+            role: "RESTAURANT_ADMIN",
+        },
+        select: {
+            id: true,
+        },
+    });
+
+    if (admin) {
+        void notifyUser(
+            admin.id,
+            "Order Cancelled!",
+            `Customer has cancelled order #${updatedOrder.id}.`,
+            getFrontendUrl("/admin/orders")
+        ).catch((error: unknown) => {
+            console.error("Failed to send order cancellation push notification to admin:", error,);
+        });
+    }
 
     return {
         order: updatedOrder,
