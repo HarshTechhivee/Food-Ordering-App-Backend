@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "lint": "eslint .",
     "start": "node dist/server.js",
     "stripe": "stripe listen --events payment_intent.succeeded,payment_intent.payment_failed,refund.created --forward-to localhost:5001/api/payments/webhook"

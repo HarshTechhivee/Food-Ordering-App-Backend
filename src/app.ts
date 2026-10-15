@@ -14,13 +14,14 @@ import path from "node:path";
 import paymentRoutes from "./routes/payment.routes.js";
 import { stripeWebhook } from "./controllers/payment.controller.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import { allowedOrigins } from "./config/allowedOrigins.js";
 
 const app = express();
 
-const allowedOrigins = [
-    "http://localhost:5174",
-    "https://s1zdx1dk-5174.inc1.devtunnels.ms",
-];
+// const allowedOrigins = [
+//     "http://localhost:5174",
+//     "https://s1zdx1dk-5174.inc1.devtunnels.ms",
+// ];
 
 app.use(
     cors({
@@ -41,8 +42,6 @@ app.post(
 app.use(express.json());
 
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
-
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -52,7 +51,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/admin/orders", adminOrderRoutes);
 app.use("/api/admin/menu", adminMenuRoutes);
 app.use("/api/admin/dashboard", adminDashboardRoutes);
-app.use("/api/payments",paymentRoutes)
+app.use("/api/payments", paymentRoutes)
 app.use("/api/notifications", notificationRoutes);
 
 app.get("/api/health", (_req, res) => {

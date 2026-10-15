@@ -15,6 +15,6 @@ export default defineConfig({
     },
 
     datasource: {
-        url: process.env["DATABASE_URL"],
+        url: process.env["NEON_DIRECT_URL"],
     },
 });

@@ -2,18 +2,17 @@ import { Server } from "socket.io";
 import type { Server as HttpServer } from "node:http";
 import { AuthTokenPayload } from "../types/auth.types.js";
 import { verifyAccessToken } from "../utils/jwt.js";
+import { allowedOrigins } from "./allowedOrigins.js";
 
 let io: Server;
 
 export const initializeSocket = (httpServer: HttpServer) => {
+
     io = new Server(httpServer, {
         cors: {
-            origin: [
-                "http://localhost:5174",
-                "https://s1zdx1dk-5174.inc1.devtunnels.ms",
-            ],
+            origin: allowedOrigins,
             credentials: true,
-        }
+        },
     });
 
     io.use((socket, next) => {
