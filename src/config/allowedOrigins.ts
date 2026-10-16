@@ -2,6 +2,7 @@
 const developmentOrigins = [
     "http://localhost:5174",
     "https://s1zdx1dk-5174.inc1.devtunnels.ms",
+    "https://food-ordering-app-frontend-a6pn.onrender.com"
 ];
 
 export const allowedOrigins = [
