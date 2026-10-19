@@ -1,8 +1,12 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+import { deleteMenuImageFromS3, getMenuImageUrl, } from "./s3MenuImage.service.js";
 import { UpdateMenuItemInput, MenuQuery } from "../types/menu.types.js";
 import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/AppError.js";
+
+export const withImageUrl = async <T extends { image: string | null }>(item: T,) => ({
+    ...item,
+    image: await getMenuImageUrl(item.image),
+});
 
 export const getAllMenuItems = async ({ page, limit, search, category, sort, }: MenuQuery) => {
 
@@ -51,8 +55,10 @@ export const getAllMenuItems = async ({ page, limit, search, category, sort, }: 
         }),
     ]);
 
+    const itemsWithImageUrls = await Promise.all(items.map(withImageUrl),);
+
     return {
-        items,
+        items: itemsWithImageUrls,
         pagination: {
             page,
             limit,
@@ -62,47 +68,46 @@ export const getAllMenuItems = async ({ page, limit, search, category, sort, }: 
     };
 };
 
-export const updateMenuItem = async (id: number, data: UpdateMenuItemInput, newImage?: string) => {
+
+export const updateMenuItem = async (id: number, data: UpdateMenuItemInput, newImage?: string,) => {
 
     const existingItem = await prisma.menuItem.findUnique({
-        where: {
-            id,
-        },
+        where: { id },
     });
 
     if (!existingItem) {
         throw new AppError("Menu item not found", 404);
     }
 
-    const updateData = { ...data, ...(newImage ? { image: newImage } : {}), };
-
     const updatedItem = await prisma.menuItem.update({
-        where: {
-            id,
+        where: { id },
+        data: {
+            ...data,
+            ...(newImage ? { image: newImage } : {}),
         },
-        data: updateData,
     });
 
-    // Delete old image only after successful DB update
-
-    if (newImage && existingItem.image) {
-
-        const oldImagePath = path.join(process.cwd(), existingItem.image.replace(/^\/+/, ""));
+    // Delete a replaced S3 image only after the database update succeeds.
+    if (
+        newImage &&
+        existingItem.image &&
+        existingItem.image !== newImage &&
+        existingItem.image.startsWith("menu/")
+    ) {
 
         try {
 
-            await fs.unlink(oldImagePath);
+            await deleteMenuImageFromS3(existingItem.image);
 
         } catch (error) {
 
-            console.error("Failed to delete old menu image:", error);
-
-            throw new AppError('Failed to delete old menu image:', 403)
-
+            // The item is already updated, so don't fail the request.
+            console.error("Failed to delete replaced S3 menu image:", error,);
         }
     }
 
-    return updatedItem;
+    // Don't delete legacy local images during this migration.
+    return withImageUrl(updatedItem);
 };
 
 
@@ -118,7 +123,7 @@ export const getMenuItemById = async (id: number) => {
         throw new AppError("Menu item not found", 404);
     }
 
-    return menuItem;
+    return withImageUrl(menuItem);
 };
 
 
@@ -138,14 +143,12 @@ export const updateMenuItemAvailability = async (id: number, isAvailable: boolea
         throw new AppError("Cannot change availability of an inactive menu item", 400);
     }
 
-    return prisma.menuItem.update({
-        where: {
-            id,
-        },
-        data: {
-            isAvailable,
-        },
+    const updatedItem = await prisma.menuItem.update({
+        where: { id },
+        data: { isAvailable },
     });
+
+    return withImageUrl(updatedItem);
 };
 
 

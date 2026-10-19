@@ -1,6 +1,7 @@
 import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/AppError.js";
 import { CreateMenuItemInput, MenuQuery, UpdateMenuItemInput } from "../types/menu.types.js";
+import { withImageUrl } from "./adminMenu.service.js";
 
 
 export const create = async (data: CreateMenuItemInput) => {
@@ -16,7 +17,7 @@ export const create = async (data: CreateMenuItemInput) => {
         },
     });
 
-    return menuItem;
+    return withImageUrl(menuItem);
 };
 
 
@@ -64,8 +65,10 @@ export const getAll = async ({ page, limit, search, category, sort, }: MenuQuery
         }),
     ]);
 
+    const itemsWithImageUrls = await Promise.all(items.map(withImageUrl),);
+
     return {
-        items,
+        items: itemsWithImageUrls,
         pagination: {
             page,
             limit,
@@ -89,7 +92,7 @@ export const getById = async (id: number) => {
         throw new AppError("Menu item not found", 404);
     }
 
-    return menuItem;
+    return withImageUrl(menuItem);
 };
 
 
@@ -106,12 +109,12 @@ export const update = async (id: number, data: UpdateMenuItemInput) => {
         throw new AppError("Menu item not found", 404);
     }
 
-    return prisma.menuItem.update({
-        where: {
-            id,
-        },
-        data,
+    const updatedItem = await prisma.menuItem.update({
+        where: { id },
+        data
     });
+
+    return withImageUrl(updatedItem);
 };
 
 

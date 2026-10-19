@@ -1,8 +1,12 @@
 import type { RequestHandler } from "express";
 import { create } from "../services/menu.service.js";
-import { getAllMenuItems, updateMenuItem, getMenuItemById, updateMenuItemAvailability, deleteMenuItem } from "../services/adminMenu.service.js";
+import {
+    getAllMenuItems, updateMenuItem, getMenuItemById,
+    updateMenuItemAvailability, deleteMenuItem
+} from "../services/adminMenu.service.js";
 import { AppError } from "../utils/AppError.js";
 import { MenuQuery } from "../types/menu.types.js";
+import { uploadMenuImageToS3, deleteMenuImageFromS3, } from "../services/s3MenuImage.service.js";
 
 export const getAdminMenu: RequestHandler = async (req, res) => {
 
@@ -35,9 +39,31 @@ export const createAdminMenuItem: RequestHandler = async (req, res) => {
         isAvailable: boolean;
     };
 
-    const image = req.file ? `/uploads/menu/${req.file.filename}` : null;
+    // Upload the image to S3 first, if one was provided.
+    const imageKey = req.file ? await uploadMenuImageToS3(req.file) : null;
 
-    const menuItem = await create({ ...body, image, });
+    let menuItem;
+
+    try {
+
+        menuItem = await create({ ...body, image: imageKey, });
+
+    } catch (error) {
+
+        // Avoid leaving an orphaned S3 object if database creation fails.
+        if (imageKey) {
+            try {
+
+                await deleteMenuImageFromS3(imageKey);
+
+            } catch (cleanupError) {
+
+                console.error("Failed to clean up uploaded S3 image:", cleanupError,);
+            }
+        }
+
+        throw error;
+    }
 
     res.status(201).json({
         success: true,
@@ -53,7 +79,7 @@ export const updateAdminMenuItem: RequestHandler = async (req, res) => {
         throw new AppError("Authentication required", 401);
     }
 
-    const { id } = req.validatedParams as { id: number; };
+    const { id } = req.validatedParams as { id: number };
 
     const body = req.validatedBody as {
         name?: string;
@@ -63,9 +89,32 @@ export const updateAdminMenuItem: RequestHandler = async (req, res) => {
         isAvailable?: boolean;
     };
 
-    const newImage = req.file ? `/uploads/menu/${req.file.filename}` : undefined;
+    // undefined means the admin didn't upload a replacement image.
+    const newImageKey = req.file ? await uploadMenuImageToS3(req.file) : undefined;
 
-    const menuItem = await updateMenuItem(id, body, newImage);
+    let menuItem;
+
+    try {
+
+        menuItem = await updateMenuItem(id, body, newImageKey);
+
+    } catch (error) {
+
+        // If the database update fails, remove the new upload.
+        if (newImageKey) {
+
+            try {
+
+                await deleteMenuImageFromS3(newImageKey);
+
+            } catch (cleanupError) {
+
+                console.error("Failed to clean up uploaded S3 image:", cleanupError,);
+            }
+        }
+
+        throw error;
+    }
 
     res.status(200).json({
         success: true,
