@@ -76,8 +76,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          DEPLOY_COMMAND=$(cat <<'REMOTE_COMMAND'
-          sudo -iu ec2-user bash -lc 'set -Eeuo pipefail
+          DEPLOY_SCRIPT=$(cat <<'REMOTE_SCRIPT'
+          #!/usr/bin/env bash
+          set -Eeuo pipefail
           cd /home/ec2-user/Food-Ordering-App-Backend
           test "$(git branch --show-current)" = "development"
           git pull --ff-only origin development
@@ -91,11 +92,15 @@ jobs:
             sleep 3
           done
           echo "Health check failed after deployment" >&2
-          exit 1'
-          REMOTE_COMMAND
+          exit 1
+          REMOTE_SCRIPT
           )
 
-          PARAMETERS=$(jq -n --arg command "$DEPLOY_COMMAND" '{commands: [$command]}')
+          # Send a single-line command to SSM. The actual deploy script is
+          # base64-encoded so SSM/shell parsing cannot collapse its newlines.
+          DEPLOY_SCRIPT_B64=$(printf '%s' "$DEPLOY_SCRIPT" | base64 -w 0)
+          REMOTE_COMMAND="printf '%s' '$DEPLOY_SCRIPT_B64' | base64 -d > /tmp/foodhub-deploy.sh && chown ec2-user:ec2-user /tmp/foodhub-deploy.sh && chmod 700 /tmp/foodhub-deploy.sh && sudo -iu ec2-user bash -lc 'bash /tmp/foodhub-deploy.sh'"
+          PARAMETERS=$(jq -n --arg command "$REMOTE_COMMAND" '{commands: [$command]}')
 
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$EC2_INSTANCE_ID" \
