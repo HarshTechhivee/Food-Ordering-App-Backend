@@ -7,7 +7,9 @@ dist/
 /src/generated/prisma
 
 credentials/
-scripts/
+
+transfer-data.mjs
+migrate-menu-images-to-s3.ts
 
 # Visual Studio Code
 .vscode/*
