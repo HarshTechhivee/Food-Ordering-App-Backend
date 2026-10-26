@@ -3,6 +3,20 @@ import { prisma } from "../config/prisma.js";
 import { emitSocketEvent } from "../utils/socket-notification.js";
 import { notifyUser } from "./pushNotification.service.js";
 import { getFrontendUrl } from "../utils/frontendUrl.js";
+import { sendOrderConfirmationEmail } from "./orderConfirmationEmail.service.js";
+
+async function sendOrderConfirmationEmailSafely(orderId: number, paymentIntent: Stripe.PaymentIntent,): Promise<void> {
+
+    try {
+
+        await sendOrderConfirmationEmail(orderId, paymentIntent,);
+
+    } catch (error: unknown) {
+
+        console.error(`Order #${orderId} was processed, but its confirmation email could not be sent.`, error,);
+
+    }
+}
 
 export const handleStripeWebhook = async (event: Stripe.Event) => {
 
@@ -42,6 +56,13 @@ export const handleStripeWebhook = async (event: Stripe.Event) => {
             });
 
             if (existingOrder) {
+                /*
+                 * The order already exists, so do not create it again.
+                 *
+                 * If a previous email attempt failed, this gives the
+                 * confirmation email another opportunity to be sent.
+                 */
+                await sendOrderConfirmationEmailSafely(existingOrder.id, paymentIntent,);
                 break;
             }
 
@@ -172,6 +193,12 @@ export const handleStripeWebhook = async (event: Stripe.Event) => {
                 });
             }
 
+            /*
+            * Send the paid-order confirmation email.
+            *
+            * The order has already been created and marked PAID.
+            */
+            await sendOrderConfirmationEmailSafely(order.id, paymentIntent,);
             break;
         }
 

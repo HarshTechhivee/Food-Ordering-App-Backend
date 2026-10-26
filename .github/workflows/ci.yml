@@ -84,6 +84,11 @@ jobs:
           git pull --ff-only origin development
           npm ci
           npm run build
+
+          echo "Applying pending Prisma migrations..."
+          npx prisma migrate deploy
+
+          echo "Restarting FoodHub backend..."
           pm2 restart foodhub-backend
           for attempt in $(seq 1 10); do
             if curl -fsS --max-time 10 https://3.105.27.169/api/health; then

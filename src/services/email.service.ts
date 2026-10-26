@@ -4,6 +4,8 @@ import {
     SendEmailCommand,
 } from "@aws-sdk/client-sesv2";
 
+import { fromIni } from "@aws-sdk/credential-providers";
+
 interface SendEmailOptions {
     to: string;
     subject: string;
@@ -11,8 +13,12 @@ interface SendEmailOptions {
     html?: string;
 }
 
+const sesProfile = process.env.SES_AWS_PROFILE?.trim();
+
 const sesClient = new SESv2Client({
     region: process.env.AWS_REGION ?? "ap-southeast-2",
+
+    ...(sesProfile ? { credentials: fromIni({ profile: sesProfile, }), } : {}),
 });
 
 export async function sendEmail({ to, subject, text, html, }: SendEmailOptions): Promise<string | undefined> {
