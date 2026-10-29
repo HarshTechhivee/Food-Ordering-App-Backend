@@ -19,6 +19,16 @@ export const getOrderById = async (orderId: number, userId: number) => {
                     menuItem: true,
                 },
             },
+            review: {
+                select: {
+                    id: true,
+                    orderId: true,
+                    rating: true,
+                    comment: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            },
         },
     });
 

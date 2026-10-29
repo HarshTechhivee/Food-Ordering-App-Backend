@@ -1,8 +1,73 @@
 import { prisma } from "../config/prisma.js";
 import { AppError } from "../utils/AppError.js";
-import { CreateMenuItemInput, MenuQuery, UpdateMenuItemInput } from "../types/menu.types.js";
+import type { CreateMenuItemInput, MenuQuery, UpdateMenuItemInput, } from "../types/menu.types.js";
 import { withImageUrl } from "./adminMenu.service.js";
 
+type MenuRatingRow = {
+    menuItemId: number;
+    averageRating: number;
+    totalReviews: bigint;
+};
+
+type MenuRatingSummary = {
+    averageRating: number;
+    totalReviews: number;
+};
+
+/**
+ * Calculate rating summaries for menu items.
+ * Each delivered order contributes its review once to every distinct menu item contained in that order.
+ */
+
+const getMenuRatingSummaries = async (): Promise<Map<number, MenuRatingSummary>> => {
+
+    const rows = await prisma.$queryRaw<MenuRatingRow[]>
+        `   SELECT
+            item_reviews."menuItemId" AS "menuItemId",
+            ROUND(AVG(item_reviews.rating)::numeric, 2)::double precision
+                AS "averageRating",
+            COUNT(*) AS "totalReviews"
+        FROM (
+            SELECT DISTINCT
+                oi."menuItemId",
+                r.id AS "reviewId",
+                r.rating
+            FROM "OrderItem" oi
+            INNER JOIN "Order" o
+                ON o.id = oi."orderId"
+            INNER JOIN "Review" r
+                ON r."orderId" = o.id
+            WHERE o.status = 'DELIVERED'
+        ) AS item_reviews
+        GROUP BY item_reviews."menuItemId"
+    `;
+
+    return new Map(
+        rows.map((row) => [
+            row.menuItemId,
+            {
+                averageRating: Number(row.averageRating.toFixed(2)),
+                totalReviews: Number(row.totalReviews),
+            },
+        ]),
+    );
+};
+
+/**
+ * Attach a rating summary to one menu item.
+ * Items without reviews receive a rating of 0 and a count of 0.
+ */
+
+const addRatingSummary = <T extends { id: number }>(menuItem: T, summaries: Map<number, MenuRatingSummary>,) => {
+
+    const summary = summaries.get(menuItem.id);
+
+    return {
+        ...menuItem,
+        averageRating: summary?.averageRating ?? 0,
+        totalReviews: summary?.totalReviews ?? 0,
+    };
+};
 
 export const create = async (data: CreateMenuItemInput) => {
 
@@ -20,15 +85,14 @@ export const create = async (data: CreateMenuItemInput) => {
     return withImageUrl(menuItem);
 };
 
-
 export const getAll = async ({ page, limit, search, category, sort, }: MenuQuery) => {
 
     const skip = (page - 1) * limit;
 
     const where = {
         isActive: true,
-        ...(search ?
-            {
+        ...(search
+            ? {
                 OR: [
                     {
                         name: {
@@ -45,30 +109,36 @@ export const getAll = async ({ page, limit, search, category, sort, }: MenuQuery
                 ],
             }
             : {}),
-        ...(category ? { category, } : {}),
+        ...(category ? { category } : {}),
     };
 
     const orderBy =
-        sort === "price_asc" ? { price: "asc" as const } : sort === "price_desc" ? { price: "desc" as const } : { createdAt: "desc" as const };
+        sort === "price_asc"
+            ? { price: "asc" as const }
+            : sort === "price_desc"
+                ? { price: "desc" as const }
+                : { createdAt: "desc" as const };
 
     const [items, total] = await prisma.$transaction([
-
         prisma.menuItem.findMany({
             where,
             orderBy,
             skip,
             take: limit,
         }),
-
-        prisma.menuItem.count({
-            where,
-        }),
+        prisma.menuItem.count({ where }),
     ]);
 
-    const itemsWithImageUrls = await Promise.all(items.map(withImageUrl),);
+    const itemsWithImageUrls = await Promise.all(
+        items.map((item) => withImageUrl(item)),
+    );
+
+    const ratingSummaries = items.length > 0 ? await getMenuRatingSummaries() : new Map<number, MenuRatingSummary>();
+
+    const itemsWithRatings = itemsWithImageUrls.map((item) => addRatingSummary(item, ratingSummaries),);
 
     return {
-        items: itemsWithImageUrls,
+        items: itemsWithRatings,
         pagination: {
             page,
             limit,
@@ -77,7 +147,6 @@ export const getAll = async ({ page, limit, search, category, sort, }: MenuQuery
         },
     };
 };
-
 
 export const getById = async (id: number) => {
 
@@ -92,11 +161,15 @@ export const getById = async (id: number) => {
         throw new AppError("Menu item not found", 404);
     }
 
-    return withImageUrl(menuItem);
+    const [itemWithImageUrl, ratingSummaries] = await Promise.all([
+        withImageUrl(menuItem),
+        getMenuRatingSummaries(),
+    ]);
+
+    return addRatingSummary(itemWithImageUrl, ratingSummaries);
 };
 
-
-export const update = async (id: number, data: UpdateMenuItemInput) => {
+export const update = async (id: number, data: UpdateMenuItemInput,) => {
 
     const existingItem = await prisma.menuItem.findFirst({
         where: {
@@ -111,12 +184,11 @@ export const update = async (id: number, data: UpdateMenuItemInput) => {
 
     const updatedItem = await prisma.menuItem.update({
         where: { id },
-        data
+        data,
     });
 
     return withImageUrl(updatedItem);
 };
-
 
 export const remove = async (id: number) => {
 
@@ -132,9 +204,7 @@ export const remove = async (id: number) => {
     }
 
     await prisma.menuItem.update({
-        where: {
-            id,
-        },
+        where: { id },
         data: {
             isActive: false,
             isAvailable: false,

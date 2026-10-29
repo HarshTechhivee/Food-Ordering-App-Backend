@@ -39,7 +39,9 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
         console.log(`Socket authenticated: user=${userId}, role=${role}, socket=${socket.id}`);
 
-        socket.join(`user:${userId}`);
+        socket.join("menu-ratings");
+
+        console.log("Socket joined room: menu-ratings");
 
         console.log(`Socket joined room: user:${userId}`);
 

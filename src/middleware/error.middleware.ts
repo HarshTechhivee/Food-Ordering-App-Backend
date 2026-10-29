@@ -1,7 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { AppError } from "../utils/AppError.js";
 
-export const errorMiddleware: ErrorRequestHandler = (err, _req, res,) => {
+export const errorMiddleware: ErrorRequestHandler = (    err,    _req,    res,    _next,) => {
 
     console.error(err);
 
@@ -10,7 +10,6 @@ export const errorMiddleware: ErrorRequestHandler = (err, _req, res,) => {
             success: false,
             message: err.message,
         });
-
         return;
     }
 
