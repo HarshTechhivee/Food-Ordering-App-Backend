@@ -21,8 +21,8 @@ type MenuRatingSummary = {
 
 const getMenuRatingSummaries = async (): Promise<Map<number, MenuRatingSummary>> => {
 
-    const rows = await prisma.$queryRaw<MenuRatingRow[]>
-        `   SELECT
+    const rows = await prisma.$queryRaw<MenuRatingRow[]>`
+        SELECT
             item_reviews."menuItemId" AS "menuItemId",
             ROUND(AVG(item_reviews.rating)::numeric, 2)::double precision
                 AS "averageRating",
