@@ -43,13 +43,12 @@ export const getMenuImageUrl = async (image: string | null): Promise<string | nu
     }
 
     // Convert S3 menu image keys into stable public URLs.
-    if (image.startsWith("menu/")) {
-
+    if (image.startsWith("menu/")) {      
         const bucket = getMenuImagesBucket();
 
         const region = process.env.AWS_REGION || "ap-southeast-2";
 
-        const encodedKey = image.split("/").map((segment) => encodeURIComponent(segment)).join("/");    
+        const encodedKey = image.split("/").map((segment) => encodeURIComponent(segment)).join("/");
 
         return `https://${bucket}.s3.${region}.amazonaws.com/${encodedKey}`;
     }

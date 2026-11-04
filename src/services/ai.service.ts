@@ -2,6 +2,8 @@ import { AiMessageRole } from "../generated/prisma/client.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import { ThinkingLevel } from "@google/genai";
 
+import { getMenuImageUrl } from "./s3MenuImage.service.js";
+
 import { extractBudget } from "../modules/AI/budget.util.js";
 
 import type { BudgetConstraint } from "../modules/AI/budget.util.js";
@@ -448,17 +450,18 @@ export const chatWithAI = async ({ userId, message, conversationId, }: AIChatSer
             },
         });
 
-        // I. Convert Decimal prices into JavaScript numbers.
+        // I. Convert Decimal prices and resolve menu image URLs.
 
-        const candidates = menuItems.map((item) => ({
-            id: item.id,
-            name: item.name,
-            description: item.description,
-            category: item.category,
-            price: Number(item.price),
-            image: item.image,
-        }));
-
+        const candidates = await Promise.all(
+            menuItems.map(async (item) => ({
+                id: item.id,
+                name: item.name,
+                description: item.description,
+                category: item.category,
+                price: Number(item.price),
+                image: await getMenuImageUrl(item.image),
+            })),
+        );
 
         // J. Apply spicy preference filtering.
 
