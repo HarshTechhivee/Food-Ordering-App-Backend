@@ -16,6 +16,7 @@ import { stripeWebhook } from "./controllers/payment.controller.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import { allowedOrigins } from "./config/allowedOrigins.js";
 import reviewRoutes from "./routes/review.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use("/api/admin/dashboard", adminDashboardRoutes);
 app.use("/api/payments", paymentRoutes)
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/api/health", (_req, res) => {
     res.status(200).json({
